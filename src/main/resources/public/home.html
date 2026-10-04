@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+    <meta charset="UTF-8">
+    <title>ArtReads - Panou Principal</title>
+    <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600&family=Cinzel:wght@500;700&family=Playfair+Display:ital,wght@0,600;1,400&family=Lora&family=Montserrat:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #fdfbf7; --text-color: #2c2c2c; --card-bg: #ffffff;
+            --accent-color: #5c4033; --border-color: #eae5d9;
+            --font-main: 'Lora', serif; --font-title: 'Playfair Display', serif;
+        }
+        body {
+            font-family: var(--font-main); background-color: var(--bg-color); color: var(--text-color);
+            margin: 0; padding: 40px; display: flex; flex-direction: column; align-items: center; min-height: 100vh;
+            transition: background 0.8s ease, color 0.8s ease;
+        }
+        body.theme-twilight { --bg-color: #1e252b; --text-color: #d1d8e0; --card-bg: #262f38; --accent-color: #4b6584; --border-color: #3b4856; --font-main: 'Cinzel', serif; }
+        body.theme-gilmore-girls { --bg-color: #f4eee1; --text-color: #3b2f2f; --card-bg: #faf5ed; --accent-color: #6b4423; --border-color: #d8c5b2; --font-main: 'Caveat', cursive, serif; font-size: 20px; }
+        body.theme-home-alone { --bg-color: #eef2f5; --text-color: #1a2530; --card-bg: #ffffff; --accent-color: #c0392b; --border-color: #cbd5e1; }
+        body.theme-500-days-of-summer { --bg-color: #fffdf5; --text-color: #2c3e50; --card-bg: #ffffff; --accent-color: #2980b9; }
+        body.theme-pride-and-prejudice { --bg-color: #f4f6f0; --text-color: #2c3e35; --card-bg: #ffffff; --accent-color: #3b5345; }
+
+        header { width: 100%; max-width: 800px; display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--border-color); padding-bottom: 20px; margin-bottom: 50px; }
+        h1 { font-family: var(--font-title); color: var(--accent-color); margin: 0; }
+        .nav-buttons a, .nav-buttons button {
+            background: var(--accent-color); color: white; border: none; padding: 10px 18px; border-radius: 6px; cursor: pointer; text-decoration: none; font-size: 15px; font-family: inherit; margin-left: 10px;
+        }
+        .dashboard-menu { display: flex; gap: 30px; width: 100%; max-width: 700px; justify-content: center; margin-top: 40px; flex-wrap: wrap; }
+        .dash-card {
+            background: var(--card-bg); border: 2px solid var(--border-color); border-radius: 12px; padding: 40px 30px; width: 280px; text-align: center; box-shadow: 0 6px 20px rgba(0,0,0,0.06); text-decoration: none; color: inherit; transition: transform 0.2s, border-color 0.2s;
+        }
+        .dash-card:hover { transform: translateY(-5px); border-color: var(--accent-color); }
+        .dash-card h2 { font-family: var(--font-title); color: var(--accent-color); margin-top: 0; }
+        .dash-card p { color: #666; font-size: 15px; }
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>ArtReads ☕🎨</h1>
+    <div class="nav-buttons">
+        <a href="/profile.html">Profilul Meu</a>
+        <button onclick="logout()">Deconectare</button>
+    </div>
+</header>
+
+<div style="text-align: center;">
+    <h2>Bun venit în Biblioteca ta Cinematică</h2>
+    <p>Alege o opțiune de mai jos pentru a continua:</p>
+</div>
+
+<div class="dashboard-menu">
+    <a href="/collection.html" class="dash-card">
+        <h2>📚 Colecția de Artă</h2>
+        <p>Explorează operele existente, aplică filtre pe categorii și sortează-le după preferințe.</p>
+    </a>
+    <a href="/add-art.html" class="dash-card">
+        <h2>✨ Adaugă Operă</h2>
+        <p>Introdu manual o operă nouă sau folosește asistentul AI pentru completare automată.</p>
+    </a>
+</div>
+
+<script>
+    async function applyDynamicCinematicTheme() {
+        const body = document.body;
+        let themeClass = "theme-gilmore-girls";
+        try {
+            let lat = 46.5456, lon = 24.5624;
+            if (navigator.geolocation) {
+                await new Promise((resolve) => {
+                    navigator.geolocation.getCurrentPosition(pos => { lat = pos.coords.latitude; lon = pos.coords.longitude; resolve(); }, () => resolve(), { timeout: 3000 });
+                });
+            }
+            const weatherRes = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true`);
+            const weatherData = await weatherRes.json();
+            if (weatherData && weatherData.current_weather) {
+                const code = weatherData.current_weather.weathercode;
+                if ((code >= 51 && code <= 67) || (code >= 80 && code <= 82) || code === 45 || code === 48) themeClass = "theme-twilight";
+                else if ((code >= 71 && code <= 77) || code === 85 || code === 86) themeClass = "theme-home-alone";
+                else themeClass = getCalendarThemeBasedSeason();
+            } else { themeClass = getCalendarThemeBasedSeason(); }
+        } catch (e) { themeClass = getCalendarThemeBasedSeason(); }
+        body.className = themeClass;
+    }
+    function getCalendarThemeBasedSeason() {
+        const month = new Date().getMonth() + 1;
+        if (month >= 9 && month <= 11) return "theme-gilmore-girls";
+        if (month === 12 || month <= 2) return "theme-home-alone";
+        if (month >= 6 && month <= 8) return "theme-500-days-of-summer";
+        return "theme-pride-and-prejudice";
+    }
+    function logout() { window.location.href = '/login.html'; }
+    document.addEventListener("DOMContentLoaded", applyDynamicCinematicTheme);
+</script>
+
+</body>
+</html>

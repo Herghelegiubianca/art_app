@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+    <meta charset="UTF-8">
+    <title>ArtReads - Detalii Operă</title>
+    <style>
+        :root {
+            --bg-color: #fdfbf7; --text-color: #2c2c2c; --card-bg: #ffffff;
+            --accent-color: #5c4033; --border-color: #eae5d9; --font-family: 'Georgia', serif;
+        }
+        body.summer { --bg-color: #f0f8ff; --text-color: #1e3d59; --card-bg: #ffffff; --accent-color: #ff6e40; --border-color: #b8e1ff; }
+        body.rain { --bg-color: #2f3640; --text-color: #f5f6fa; --card-bg: #353b48; --accent-color: #00a8ff; --border-color: #718093; }
+        body.autumn { --bg-color: #f4ebd0; --text-color: #3b2f2f; --card-bg: #faf3e0; --accent-color: #b45309; --border-color: #d3c2a0; }
+        body.winter { --bg-color: #192a56; --text-color: #f5f6fa; --card-bg: #273c75; --accent-color: #e84118; --border-color: #40739e; }
+        body.spring { --bg-color: #f3f9d2; --text-color: #2b3a1a; --card-bg: #ffffff; --accent-color: #558b2f; --border-color: #dcedc8; }
+
+        body { font-family: var(--font-family); background-color: var(--bg-color); color: var(--text-color); margin: 0; transition: background 0.5s ease; }
+        header { background: var(--card-bg); border-bottom: 1px solid var(--border-color); padding: 20px 40px; display: flex; justify-content: space-between; align-items: center; }
+        .back-btn { background: var(--accent-color); color: white; border: none; padding: 10px 16px; border-radius: 6px; cursor: pointer; font-family: inherit; }
+        .container { max-width: 800px; margin: 40px auto; padding: 30px; background: var(--card-bg); border-radius: 12px; border: 1px solid var(--border-color); box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+        button { background: var(--accent-color); color: white; border: none; padding: 8px 14px; border-radius: 6px; cursor: pointer; font-family: inherit; }
+        textarea { width: 100%; padding: 10px; margin: 10px 0; border: 1px solid var(--border-color); border-radius: 6px; box-sizing: border-box; background: var(--card-bg); color: var(--text-color); font-family: inherit; }
+        .review-card { background: rgba(0,0,0,0.02); border: 1px solid var(--border-color); padding: 12px; border-radius: 6px; margin-bottom: 10px; }
+    </style>
+</head>
+<body>
+
+<header>
+    <h2>ArtReads 🖼️</h2>
+    <button class="back-btn" onclick="window.location.href='/home.html'">← Înapoi la Feed</button>
+</header>
+
+<div class="container">
+    <div id="art-details">
+        <h2>Se încarcă detaliile operei...</h2>
+    </div>
+
+    <hr style="border: 0; border-top: 1px solid var(--border-color); margin: 30px 0;">
+
+    <h3>Recenzii</h3>
+    <div id="reviews-section"><p>Se încarcă recenziile...</p></div>
+
+    <div style="margin-top: 25px;">
+        <h4>Adaugă o recenzie</h4>
+        <textarea id="review-content" rows="3" placeholder="Ce părere ai despre această operă? (Conținutul este moderat automat)"></textarea>
+        <button onclick="submitReview()">Trimite Recenzia</button>
+    </div>
+</div>
+
+<script>
+    const urlParams = new URLSearchParams(window.location.search);
+    const artId = urlParams.get('id');
+
+    async function loadArtDetails() {
+        if (!artId) {
+            document.getElementById('art-details').innerHTML = "<p>Operă negăsită.</p>";
+            return;
+        }
+
+        try {
+            const res = await fetch(`/api/art-pieces/${artId}`);
+            if (res.ok) {
+                const art = await res.json();
+                document.getElementById('art-details').innerHTML = `
+                    <h1 style="margin-top: 0;">${art.title}</h1>
+                    <p style="font-size: 18px; color: var(--accent-color);"><strong>Artist:</strong> ${art.artist ? art.artist.name : 'Necunoscut'}</p>
+                    <p><strong>Categorie:</strong> ${art.category ? art.category.name : 'General'}</p>
+                    <p style="line-height: 1.6; margin-top: 20px;">${art.description || 'Fără descriere disponibilă.'}</p>
+                    <div style="margin-top: 20px;">
+                        <button onclick="deleteArtPiece(${art.id})" style="background-color: #c0392b; color: white; padding: 8px 14px; border: none; border-radius: 6px; cursor: pointer;">🗑️ Șterge Această Operă</button>
+                    </div>
+                `;
+                loadReviews();
+            } else {
+                document.getElementById('art-details').innerHTML = "<p>Opera nu a putut fi găsită în baza de date.</p>";
+            }
+        } catch (e) {
+            console.error(e);
+        }
+    }
+
+    async function loadReviews() {
+        try {
+            const res = await fetch(`/api/art-pieces/${artId}/reviews`);
+            if (res.ok) {
+                const reviews = await res.json();
+                const section = document.getElementById('reviews-section');
+                if (reviews.length === 0) {
+                    section.innerHTML = "<p>Nu există recenzii pentru această operă momentan. Fii primul care adaugă una!</p>";
+                    return;
+                }
+                section.innerHTML = "";
+                reviews.forEach(r => {
+                    const card = document.createElement('div');
+                    card.className = 'review-card';
+                    card.innerHTML = `
+                        <p style="margin: 0 0 5px 0; font-size: 14px; color: var(--accent-color);"><strong>${r.user ? r.user.username : 'Utilizator anonim'}</strong></p>
+                        <p style="margin: 0;">${escapeHtml(r.content)}</p>
+                    `;
+                    section.appendChild(card);
+                });
+            }
+        } catch (e) {
+            console.error("Eroare la încărcarea recenziilor:", e);
+        }
+    }
+
+    async function submitReview() {
+        const content = document.getElementById('review-content').value;
+        if (!content.trim()) return;
+
+        try {
+            const res = await fetch(`/api/art-pieces/${artId}/reviews`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: `content=${encodeURIComponent(content)}`
+            });
+
+            if (res.ok) {
+                document.getElementById('review-content').value = '';
+                alert("Recenzie adăugată cu succes!");
+                loadReviews();
+            } else {
+                const errText = await res.text();
+                alert("Eroare: " + errText);
+            }
+        } catch (e) {
+            alert("Eroare de rețea la trimiterea recenziei.");
+        }
+    }
+
+    async function deleteArtPiece(id) {
+        if (!confirm("Ești sigur că vrei să ștergi această operă? Acțiunea este ireversibilă.")) return;
+        try {
+            const res = await fetch(`/api/art-pieces/${id}`, { method: 'DELETE' });
+            if (res.ok) {
+                alert("Opera a fost ștearsă!");
+                window.location.href = '/collection.html';
+            } else {
+                const err = await res.text();
+                alert("Eroare: " + err);
+            }
+        } catch (e) {
+            alert("Eroare de rețea.");
+        }
+    }
+
+    function escapeHtml(str) {
+        if (!str) return '';
+        return String(str).replace(/[&<>'"]/g, tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag));
+    }
+
+    async function initTheme() {
+        if (!navigator.geolocation) return;
+        navigator.geolocation.getCurrentPosition(async (pos) => {
+            try {
+                const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${pos.coords.latitude}&longitude=${pos.coords.longitude}&current_weather=true`);
+                const data = await res.json();
+                const temp = data.current_weather.temperature;
+                const code = data.current_weather.weathercode;
+                if (code >= 51 && code <= 67) document.body.className = "rain";
+                else if (code >= 71 && code <= 77) document.body.className = "winter";
+                else if (temp > 24) document.body.className = "summer";
+                else if (temp < 10) document.body.className = "autumn";
+                else document.body.className = "spring";
+            } catch(e) {}
+        });
+    }
+
+    async function loadReviews() {
+        try {
+            const res = await fetch(`/api/art-pieces/${artId}/reviews`);
+            if (res.ok) {
+                const reviews = await res.json();
+                const section = document.getElementById('reviews-section');
+                if (reviews.length === 0) {
+                    section.innerHTML = "<p>Nu există recenzii pentru această operă momentan. Fii primul care adaugă una!</p>";
+                    return;
+                }
+                section.innerHTML = "";
+
+                for (const r of reviews) {
+                    const card = document.createElement('div');
+                    card.className = 'review-card';
+                    card.style.marginBottom = "20px";
+
+                    // Preluăm comentariile pentru această recenzie
+                    let commentsHtml = "";
+                    try {
+                        const commRes = await fetch(`/api/reviews/${r.id}/comments`);
+                        if (commRes.ok) {
+                            const comments = await commRes.json();
+                            comments.forEach(c => {
+                                commentsHtml += `
+                                    <div style="background: rgba(0,0,0,0.03); padding: 8px; border-radius: 4px; margin-top: 6px; font-size: 13px;">
+                                        <strong>${c.user ? c.user.username : 'Anonim'}:</strong> ${escapeHtml(c.content)}
+                                    </div>
+                                `;
+                            });
+                        }
+                    } catch (err) { console.error(err); }
+
+                    card.innerHTML = `
+                        <p style="margin: 0 0 5px 0; font-size: 14px; color: var(--accent-color);"><strong>${r.user ? r.user.username : 'Utilizator anonim'}</strong></p>
+                        <p style="margin: 0 0 10px 0;">${escapeHtml(r.content)}</p>
+
+                        <div style="margin-left: 15px; border-left: 2px solid var(--border-color); padding-left: 10px; margin-top: 10px;">
+                            <h5 style="margin: 0 0 5px 0; color: var(--accent-color);">Comentarii</h5>
+                            <div id="comments-container-${r.id}">${commentsHtml || '<p style="font-size: 12px; color: #777;">Niciun comentariu.</p>'}</div>
+
+                            <div style="display: flex; gap: 5px; margin-top: 8px;">
+                                <input type="text" id="comment-input-${r.id}" placeholder="Scrie un comentariu..." style="flex: 1; padding: 6px; font-size: 13px;">
+                                <button onclick="submitComment(${r.id})" style="padding: 6px 10px; font-size: 12px;">Răspunde</button>
+                            </div>
+                        </div>
+                    `;
+                    section.appendChild(card);
+                }
+            }
+        } catch (e) {
+            console.error("Eroare la încărcarea recenziilor:", e);
+        }
+    }
+
+    async function submitComment(reviewId) {
+        const input = document.getElementById(`comment-input-${reviewId}`);
+        const content = input.value;
+        if (!content.trim()) return;
+
+        try {
+            const res = await fetch(`/api/reviews/${reviewId}/comments`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: `content=${encodeURIComponent(content)}`
+            });
+
+            if (res.ok) {
+                input.value = '';
+                loadReviews(); // Reîncărcăm recenziile și comentariile
+            } else {
+                const errText = await res.text();
+                alert("Eroare: " + errText);
+            }
+        } catch (e) {
+            alert("Eroare de rețea la trimiterea comentariului.");
+        }
+    }
+
+    async function loadReviews() {
+        try {
+            const res = await fetch(`/api/art-pieces/${artId}/reviews`);
+            if (res.ok) {
+                const reviews = await res.json();
+                const section = document.getElementById('reviews-section');
+                if (reviews.length === 0) {
+                    section.innerHTML = "<p>Nu există recenzii pentru această operă momentan. Fii primul care adaugă una!</p>";
+                    return;
+                }
+                section.innerHTML = "";
+
+                for (const r of reviews) {
+                    const card = document.createElement('div');
+                    card.className = 'review-card';
+                    card.style.marginBottom = "20px";
+
+                    let commentsHtml = "";
+                    try {
+                        const commRes = await fetch(`/api/reviews/${r.id}/comments`);
+                        if (commRes.ok) {
+                            const comments = await commRes.json();
+                            comments.forEach(c => {
+                                commentsHtml += `
+                                    <div style="background: rgba(0,0,0,0.03); padding: 8px; border-radius: 4px; margin-top: 6px; font-size: 13px; display: flex; justify-content: space-between; align-items: center;">
+                                        <div><strong>${c.user ? c.user.username : 'Anonim'}:</strong> ${escapeHtml(c.content)}</div>
+                                        <button onclick="reportComment(${c.id})" style="background: none; border: none; cursor: pointer; font-size: 11px; color: #c0392b;" title="Raportează comentariul">🚨</button>
+                                    </div>
+                                `;
+                            });
+                        }
+                    } catch (err) { console.error(err); }
+
+                    card.innerHTML = `
+                        <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                            <p style="margin: 0 0 5px 0; font-size: 14px; color: var(--accent-color);"><strong>${r.user ? r.user.username : 'Utilizator anonim'}</strong></p>
+                            <button onclick="reportReview(${r.id})" style="background: none; border: none; cursor: pointer; font-size: 12px; color: #c0392b;" title="Raportează recenzia">🚨 Raportează</button>
+                        </div>
+                        <p style="margin: 0 0 10px 0;">${escapeHtml(r.content)}</p>
+
+                        <div style="margin-left: 15px; border-left: 2px solid var(--border-color); padding-left: 10px; margin-top: 10px;">
+                            <h5 style="margin: 0 0 5px 0; color: var(--accent-color);">Comentarii</h5>
+                            <div id="comments-container-${r.id}">${commentsHtml || '<p style="font-size: 12px; color: #777;">Niciun comentariu.</p>'}</div>
+
+                            <div style="display: flex; gap: 5px; margin-top: 8px;">
+                                <input type="text" id="comment-input-${r.id}" placeholder="Scrie un comentariu..." style="flex: 1; padding: 6px; font-size: 13px;">
+                                <button onclick="submitComment(${r.id})" style="padding: 6px 10px; font-size: 12px;">Răspunde</button>
+                            </div>
+                        </div>
+                    `;
+                    section.appendChild(card);
+                }
+            }
+        } catch (e) {
+            console.error("Eroare la încărcarea recenziilor:", e);
+        }
+    }
+
+    async function reportReview(reviewId) {
+        if (!confirm("Sigur vrei să raportezi această recenzie?")) return;
+        try {
+            const res = await fetch(`/api/reviews/${reviewId}/report`, { method: 'POST' });
+            if (res.ok) {
+                alert("Recenzia a fost raportată. Mulțumim!");
+                loadReviews();
+            } else {
+                alert("Eroare la raportare.");
+            }
+        } catch (e) {
+            alert("Eroare de rețea.");
+        }
+    }
+
+    async function reportComment(commentId) {
+        if (!confirm("Sigur vrei să raportezi acest comentariu?")) return;
+        try {
+            const res = await fetch(`/api/comments/${commentId}/report`, { method: 'POST' });
+            if (res.ok) {
+                alert("Comentariul a fost raportat. Mulțumim!");
+                loadReviews();
+            } else {
+                alert("Eroare la raportare.");
+            }
+        } catch (e) {
+            alert("Eroare de rețea.");
+        }
+    }
+
+    initTheme();
+    loadArtDetails();
+</script>
+</body>
+</html>

@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+    <meta charset="UTF-8">
+    <title>ArtReads - Înregistrare</title>
+    <style>
+        body { font-family: 'Georgia', serif; background: #fdfbf7; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; color: #2c2c2c; }
+        .auth-card { background: white; padding: 40px; border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.08); width: 380px; border: 1px solid #eae5d9; }
+        h2 { text-align: center; margin-bottom: 25px; color: #3b302a; }
+        input { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #dcd6cd; border-radius: 6px; box-sizing: border-box; background: #faf9f6; }
+        button { background: #5c4033; color: white; border: none; padding: 12px; width: 100%; border-radius: 6px; cursor: pointer; font-size: 16px; font-weight: bold; margin-top: 10px; }
+        button:hover { background: #432e24; }
+        .error { color: #a94442; font-size: 14px; text-align: center; margin-top: 10px; }
+        .link-switch { text-align: center; margin-top: 20px; font-size: 14px; }
+        .link-switch a { color: #8b5a2b; text-decoration: none; }
+    </style>
+</head>
+<body>
+
+<div class="auth-card">
+    <h2>Alătură-te ArtReads 📖</h2>
+    <input type="text" id="reg-username" placeholder="Nume Utilizator">
+    <input type="email" id="reg-email" placeholder="Adresă Email">
+    <input type="password" id="reg-password" placeholder="Parolă Sigură">
+    <button onclick="register()">Creează Contul</button>
+    <p class="error" id="reg-error"></p>
+    <div class="link-switch">
+        Ai deja cont? <a href="/login.html">Conectează-te</a>
+    </div>
+</div>
+
+<script>
+    async function register() {
+        const username = document.getElementById('reg-username').value;
+        const email = document.getElementById('reg-email').value;
+        const password = document.getElementById('reg-password').value;
+        const response = await fetch('/api/register', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: `username=${encodeURIComponent(username)}&email=${encodeURIComponent(email)}&password=${encodeURIComponent(password)}`
+        });
+        if (response.ok) {
+            alert('Cont creat cu succes! Te poți autentifica.');
+            window.location.href = '/login.html';
+        } else {
+            document.getElementById('reg-error').innerText = await response.text();
+        }
+    }
+</script>
+</body>
+</html>

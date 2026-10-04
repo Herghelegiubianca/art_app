@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+    <meta charset="UTF-8">
+    <title>ArtReads - Autentificare</title>
+    <style>
+        body { font-family: 'Georgia', serif; background: #fdfbf7; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; color: #2c2c2c; }
+        .auth-card { background: white; padding: 40px; border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.08); width: 380px; border: 1px solid #eae5d9; }
+        h2 { text-align: center; margin-bottom: 25px; color: #3b302a; }
+        input { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #dcd6cd; border-radius: 6px; box-sizing: border-box; background: #faf9f6; font-family: inherit; }
+        button { background: #5c4033; color: white; border: none; padding: 12px; width: 100%; border-radius: 6px; cursor: pointer; font-size: 16px; font-weight: bold; margin-top: 10px; font-family: inherit; }
+        button:hover { background: #432e24; }
+        .error { color: #a94442; font-size: 14px; text-align: center; margin-top: 10px; }
+        .success { color: #27ae60; font-size: 14px; text-align: center; margin-top: 10px; }
+        .link-switch { text-align: center; margin-top: 20px; font-size: 14px; }
+        .link-switch a { color: #8b5a2b; text-decoration: none; cursor: pointer; }
+        .link-switch a:hover { text-decoration: underline; }
+
+        /* Stiluri pentru Modalul de Resetare Parolă */
+        .modal { display: none; position: fixed; z-index: 100; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.4); justify-content: center; align-items: center; }
+        .modal-content { background: white; padding: 30px; border-radius: 12px; width: 350px; border: 1px solid #eae5d9; box-shadow: 0 5px 20px rgba(0,0,0,0.15); }
+    </style>
+</head>
+<body>
+
+<div class="auth-card">
+    <h2>ArtReads ☕</h2>
+    <input type="email" id="login-email" placeholder="Adresă Email">
+    <input type="password" id="login-password" placeholder="Parolă">
+    <button onclick="login()">Pășește în Bibliotecă</button>
+
+    <div class="link-switch" style="margin-top: 15px;">
+        <a onclick="openForgotModal()">Ți-ai uitat parola?</a>
+    </div>
+
+    <p class="error" id="login-error"></p>
+    <div class="link-switch">
+        Nu ai un cont? <a href="/register.html">Creează unul aici</a>
+    </div>
+</div>
+
+<!-- Modal pentru recuperare parolă -->
+<div id="forgotModal" class="modal">
+    <div class="modal-content">
+        <h3>Recuperare Parolă</h3>
+        <p style="font-size: 13px; opacity: 0.8;">Introdu adresa de email pentru a primi linkul de resetare.</p>
+        <input type="email" id="forgot-email" placeholder="Introdu emailul tău">
+        <button onclick="sendResetRequest()">Trimite Link</button>
+        <p class="error" id="forgot-error"></p>
+        <p class="success" id="forgot-success"></p>
+        <div style="text-align: right; margin-top: 15px;">
+            <a onclick="closeForgotModal()" style="font-size: 13px; color: #666; cursor: pointer;">Închide</a>
+        </div>
+    </div>
+</div>
+
+<script>
+    async function login() {
+        const email = document.getElementById('login-email').value;
+        const password = document.getElementById('login-password').value;
+        const response = await fetch('/api/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: `email=${encodeURIComponent(email)}&password=${encodeURIComponent(password)}`
+        });
+        if (response.ok) {
+            window.location.href = '/home.html';
+        } else {
+            document.getElementById('login-error').innerText = await response.text();
+        }
+    }
+
+    function openForgotModal() {
+        document.getElementById('forgotModal').style.display = 'flex';
+        document.getElementById('forgot-error').innerText = '';
+        document.getElementById('forgot-success').innerText = '';
+    }
+
+    function closeForgotModal() {
+        document.getElementById('forgotModal').style.display = 'none';
+    }
+
+    async function sendResetRequest() {
+        const email = document.getElementById('forgot-email').value;
+        if (!email) {
+            document.getElementById('forgot-error').innerText = "Te rog introdu un email valid.";
+            return;
+        }
+
+        const response = await fetch('/api/forgot-password', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: `email=${encodeURIComponent(email)}`
+        });
+
+        if (response.ok) {
+            document.getElementById('forgot-success').innerText = "Email trimis! Verifică-ți inbox-ul.";
+            document.getElementById('forgot-error').innerText = '';
+        } else {
+            const err = await response.text();
+            document.getElementById('forgot-error').innerText = err;
+            document.getElementById('forgot-success').innerText = '';
+        }
+    }
+</script>
+</body>
+</html>

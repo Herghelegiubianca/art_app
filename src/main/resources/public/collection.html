@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+    <meta charset="UTF-8">
+    <title>Colecția de Artă - ArtReads</title>
+    <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600&family=Cinzel:wght@500;700&family=Playfair+Display:ital,wght@0,600;1,400&family=Lora&family=Montserrat:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #fdfbf7; --text-color: #2c2c2c; --card-bg: #ffffff;
+            --accent-color: #5c4033; --border-color: #eae5d9;
+            --font-main: 'Lora', serif; --font-title: 'Playfair Display', serif;
+        }
+        body { font-family: var(--font-main); background-color: var(--bg-color); color: var(--text-color); margin: 0; padding: 30px; transition: background 0.8s ease, color 0.8s ease; }
+        body.theme-twilight { --bg-color: #1e252b; --text-color: #d1d8e0; --card-bg: #262f38; --accent-color: #4b6584; --border-color: #3b4856; --font-main: 'Cinzel', serif; }
+        body.theme-gilmore-girls { --bg-color: #f4eee1; --text-color: #3b2f2f; --card-bg: #faf5ed; --accent-color: #6b4423; --border-color: #d8c5b2; --font-main: 'Caveat', cursive, serif; font-size: 20px; }
+        body.theme-home-alone { --bg-color: #eef2f5; --text-color: #1a2530; --card-bg: #ffffff; --accent-color: #c0392b; --border-color: #cbd5e1; }
+        body.theme-500-days-of-summer { --bg-color: #fffdf5; --text-color: #2c3e50; --card-bg: #ffffff; --accent-color: #2980b9; }
+        body.theme-pride-and-prejudice { --bg-color: #f4f6f0; --text-color: #2c3e35; --card-bg: #ffffff; --accent-color: #3b5345; }
+
+        header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--border-color); padding-bottom: 15px; margin-bottom: 25px; }
+        h1 { font-family: var(--font-title); color: var(--accent-color); margin: 0; }
+        .controls { display: flex; gap: 15px; margin-bottom: 25px; flex-wrap: wrap; background: var(--card-bg); padding: 15px; border-radius: 8px; border: 1px solid var(--border-color); }
+        select, input { padding: 8px 12px; border: 1px solid var(--border-color); border-radius: 4px; font-family: inherit; background: var(--bg-color); color: var(--text-color); }
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; }
+        .card { background: var(--card-bg); border: 1px solid var(--border-color); padding: 20px; border-radius: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.03); }
+        .card h3 { margin-top: 0; font-family: var(--font-title); color: var(--accent-color); }
+        .btn-back { background: var(--accent-color); color: white; padding: 8px 14px; text-decoration: none; border-radius: 4px; font-size: 14px; }
+
+        .card {
+            background: var(--card-bg);
+            border: 12px solid #3d2817; /* Culoarea lemnului de la ramă */
+            padding: 20px;
+            border-radius: 4px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2), inset 0 0 10px rgba(0,0,0,0.5); /* Efect de adâncime și umbră */
+            position: relative;
+            margin-bottom: 20px;
+        }
+        /* Efect fin de ramă interioară aurie / argintie */
+        .card::after {
+            content: '';
+            position: absolute;
+            top: 4px; left: 4px; right: 4px; bottom: 4px;
+            border: 1px solid #c5a059;
+            pointer-events: none;
+        }
+
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>Colecția de Artă 📚</h1>
+    <a href="/home.html" class="btn-back">← Înapoi la Panou</a>
+</header>
+
+<div class="controls">
+    <div>
+        <label for="filter-category">Filtrează după Categorie:</label>
+        <select id="filter-category" onchange="filterAndSortPieces()">
+            <option value="">Toate categoriile</option>
+        </select>
+    </div>
+    <div>
+        <label for="sort-by">Sortează după:</label>
+        <select id="sort-by" onchange="filterAndSortPieces()">
+            <option value="title-asc">Titlu (A-Z)</option>
+            <option value="title-desc">Titlu (Z-A)</option>
+            <option value="artist-asc">Artist (A-Z)</option>
+        </select>
+    </div>
+</div>
+
+<div class="grid" id="art-grid"></div>
+
+<script>
+    let allArtPieces = [];
+
+    async function applyDynamicCinematicTheme() {
+        const body = document.body;
+        let themeClass = "theme-gilmore-girls";
+        try {
+            let lat = 46.5456, lon = 24.5624;
+            if (navigator.geolocation) {
+                await new Promise((resolve) => {
+                    navigator.geolocation.getCurrentPosition(pos => { lat = pos.coords.latitude; lon = pos.coords.longitude; resolve(); }, () => resolve(), { timeout: 3000 });
+                });
+            }
+            const weatherRes = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true`);
+            const weatherData = await weatherRes.json();
+            if (weatherData && weatherData.current_weather) {
+                const code = weatherData.current_weather.weathercode;
+                if ((code >= 51 && code <= 67) || (code >= 80 && code <= 82) || code === 45 || code === 48) themeClass = "theme-twilight";
+                else if ((code >= 71 && code <= 77) || code === 85 || code === 86) themeClass = "theme-home-alone";
+                else themeClass = getCalendarThemeBasedSeason();
+            } else { themeClass = getCalendarThemeBasedSeason(); }
+        } catch (e) { themeClass = getCalendarThemeBasedSeason(); }
+        body.className = themeClass;
+    }
+
+    function getCalendarThemeBasedSeason() {
+        const month = new Date().getMonth() + 1;
+        if (month >= 9 && month <= 11) return "theme-gilmore-girls";
+        if (month === 12 || month <= 2) return "theme-home-alone";
+        if (month >= 6 && month <= 8) return "theme-500-days-of-summer";
+        return "theme-pride-and-prejudice";
+    }
+
+    async function loadCollection() {
+        try {
+            const response = await fetch('/api/art-pieces');
+            if (response.status === 401) {
+                window.location.href = '/login.html';
+                return;
+            }
+            if (response.ok) {
+                allArtPieces = await response.json();
+                populateCategories();
+                filterAndSortPieces();
+            }
+        } catch (e) {
+            console.error("Eroare la încărcarea operelor:", e);
+        }
+    }
+
+    function populateCategories() {
+        const categorySet = new Set();
+        allArtPieces.forEach(p => {
+            if (p.category && p.category.name) categorySet.add(p.category.name);
+        });
+        const select = document.getElementById('filter-category');
+        select.innerHTML = '<option value="">Toate categoriile</option>';
+        categorySet.forEach(cat => {
+            const opt = document.createElement('option');
+            opt.value = cat;
+            opt.textContent = cat;
+            select.appendChild(opt);
+        });
+    }
+
+    function filterAndSortPieces() {
+        const selectedCat = document.getElementById('filter-category').value;
+        const sortBy = document.getElementById('sort-by').value;
+
+        let filtered = allArtPieces.filter(p => {
+            if (!selectedCat) return true;
+            return p.category && p.category.name === selectedCat;
+        });
+
+        filtered.sort((a, b) => {
+            if (sortBy === 'title-asc') return a.title.localeCompare(b.title);
+            if (sortBy === 'title-desc') return b.title.localeCompare(a.title);
+            if (sortBy === 'artist-asc') {
+                const nameA = a.artist ? a.artist.name : '';
+                const nameB = b.artist ? b.artist.name : '';
+                return nameA.localeCompare(nameB);
+            }
+            return 0;
+        });
+
+        renderPieces(filtered);
+    }
+
+    function renderPieces(pieces) {
+        const grid = document.getElementById('art-grid');
+        grid.innerHTML = "";
+        if (!pieces || pieces.length === 0) {
+            grid.innerHTML = "<p>Nicio operă găsită în colecție.</p>";
+            return;
+        }
+
+        pieces.forEach(piece => {
+            const card = document.createElement('div');
+            card.className = 'card';
+            card.innerHTML = `
+                <h3>${escapeHtml(piece.title)}</h3>
+                <p><strong>Artist:</strong> ${escapeHtml(piece.artist ? piece.artist.name : 'Necunoscut')}</p>
+                <p><strong>Categorie:</strong> ${escapeHtml(piece.category ? piece.category.name : 'General')}</p>
+                <p>${escapeHtml(piece.description || 'Fără descriere.')}</p>
+                <a href="/art-detail.html?id=${piece.id}" style="color: var(--accent-color); font-weight: bold; text-decoration: none;">Vezi detalii →</a>
+            `;
+            grid.appendChild(card);
+        });
+    }
+
+    function escapeHtml(str) {
+        if (!str) return '';
+        return String(str).replace(/[&<>'"]/g, tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag));
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+        applyDynamicCinematicTheme();
+        loadCollection();
+    });
+</script>
+
+</body>
+</html>

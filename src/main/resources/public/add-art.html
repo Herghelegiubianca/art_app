@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+    <meta charset="UTF-8">
+    <title>ArtReads - Adaugă Operă</title>
+    <style>
+        :root {
+            --bg-color: #fdfbf7; --text-color: #2c2c2c; --card-bg: #ffffff;
+            --accent-color: #5c4033; --border-color: #eae5d9; --font-family: 'Georgia', serif;
+        }
+        body.summer { --bg-color: #f0f8ff; --text-color: #1e3d59; --card-bg: #ffffff; --accent-color: #ff6e40; --border-color: #b8e1ff; }
+        body.rain { --bg-color: #2f3640; --text-color: #f5f6fa; --card-bg: #353b48; --accent-color: #00a8ff; --border-color: #718093; }
+        body.autumn { --bg-color: #f4ebd0; --text-color: #3b2f2f; --card-bg: #faf3e0; --accent-color: #b45309; --border-color: #d3c2a0; }
+        body.winter { --bg-color: #192a56; --text-color: #f5f6fa; --card-bg: #273c75; --accent-color: #e84118; --border-color: #40739e; }
+        body.spring { --bg-color: #f3f9d2; --text-color: #2b3a1a; --card-bg: #ffffff; --accent-color: #558b2f; --border-color: #dcedc8; }
+
+        body { font-family: var(--font-family); background-color: var(--bg-color); color: var(--text-color); margin: 0; transition: background 0.5s ease; }
+        header { background: var(--card-bg); border-bottom: 1px solid var(--border-color); padding: 20px 40px; display: flex; justify-content: space-between; align-items: center; }
+        .back-btn { background: var(--accent-color); color: white; border: none; padding: 10px 16px; border-radius: 6px; cursor: pointer; font-family: inherit; }
+        .container { max-width: 700px; margin: 40px auto; padding: 30px; background: var(--card-bg); border-radius: 12px; border: 1px solid var(--border-color); box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+        input, select, textarea { width: 100%; padding: 10px; margin: 8px 0 15px 0; border: 1px solid var(--border-color); border-radius: 6px; box-sizing: border-box; background: var(--card-bg); color: var(--text-color); font-family: inherit; }
+        button { background: var(--accent-color); color: white; border: none; padding: 10px 16px; border-radius: 6px; cursor: pointer; font-family: inherit; }
+        .ai-btn { background: #8e44ad !important; margin-bottom: 5px; font-size: 13px; padding: 6px 12px; }
+        .row { display: flex; gap: 10px; align-items: center; }
+        #new-artist-section { border: 1px dashed var(--accent-color); padding: 15px; border-radius: 8px; margin-bottom: 15px; background: rgba(0,0,0,0.01); }
+    </style>
+</head>
+<body>
+
+<header>
+    <h2>ArtReads 🖼️</h2>
+    <button class="back-btn" onclick="window.location.href='/home.html'">← Înapoi la Panou</button>
+</header>
+
+<div class="container">
+    <h2>Adaugă o Operă de Artă Nouă</h2>
+
+    <label><strong>Titlul Operei:</strong></label>
+    <input type="text" id="art-title" placeholder="Ex: Noaptea înstelată" maxlength="300">
+
+    <label><strong>Artist:</strong></label>
+    <select id="artist-select" onchange="handleArtistChange()">
+        <option value="">-- Încarcă artiștii... --</option>
+        <option value="NEW">➕ Adaugă un artist nou...</option>
+    </select>
+
+    <!-- Secțiune pentru artist nou (afișată doar la opțiunea NEW) -->
+    <div id="new-artist-section" style="display: none;">
+        <h4>Detalii Artist Nou</h4>
+        <input type="text" id="new-artist-name" placeholder="Nume complet artist">
+
+        <div class="row">
+            <input type="text" id="new-artist-nationality" placeholder="Naționalitate">
+            <button type="button" class="ai-btn" onclick="completeArtistWithAi()">✨ Completează cu AI</button>
+        </div>
+
+        <textarea id="new-artist-biography" rows="2" placeholder="Biografie scurtă..."></textarea>
+    </div>
+
+    <label><strong>Categorie:</strong></label>
+    <div class="row">
+        <input type="text" id="art-category" placeholder="Ex: Pictură, Sculptură" maxlength="100">
+        <button type="button" class="ai-btn" onclick="suggestCategoryAi()">✨ Sugerează Categorie</button>
+    </div>
+
+    <label><strong>Descriere:</strong></label>
+    <div style="margin-bottom: 5px;">
+        <button type="button" class="ai-btn" onclick="generateDescriptionAi()">✨ Generează Descriere cu AI</button>
+    </div>
+    <textarea id="art-description" rows="5" placeholder="Descrierea operei..."></textarea>
+
+    <button onclick="submitArtPiece()" style="width: 100%; margin-top: 10px; padding: 12px; font-size: 16px;">Salvează Opera</button>
+</div>
+
+<script>
+    async function loadArtists() {
+        try {
+            const res = await fetch('/api/artists');
+            if (res.ok) {
+                const artists = await res.json();
+                const select = document.getElementById('artist-select');
+                select.innerHTML = '<option value="">-- Selectează un artist existent --</option><option value="NEW">➕ Adaugă un artist nou...</option>';
+                artists.forEach(a => {
+                    const opt = document.createElement('option');
+                    opt.value = a.name;
+                    opt.textContent = `${a.name} (${a.nationality || 'Necunoscută'})`;
+                    select.appendChild(opt);
+                });
+            }
+        } catch (e) {
+            console.error("Eroare la preluarea artiștilor", e);
+        }
+    }
+
+    function handleArtistChange() {
+        const val = document.getElementById('artist-select').value;
+        const newSec = document.getElementById('new-artist-section');
+        newSec.style.display = (val === 'NEW') ? 'block' : 'none';
+    }
+
+    async function completeArtistWithAi() {
+        const name = document.getElementById('new-artist-name').value;
+        if (!name.trim()) {
+            alert("Introdu mai întâi numele artistului!");
+            return;
+        }
+        try {
+            const res = await fetch('/api/ai/artist-details', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: `artistName=${encodeURIComponent(name)}`
+            });
+            if (res.ok) {
+                const data = await res.json();
+                document.getElementById('new-artist-nationality').value = data.nationality || '';
+                document.getElementById('new-artist-biography').value = data.biography || '';
+            } else {
+                alert("Eroare la generarea detaliilor prin AI.");
+            }
+        } catch (e) {
+            alert("Eroare de rețea.");
+        }
+    }
+
+    async function suggestCategoryAi() {
+        const title = document.getElementById('art-title').value;
+        const selectArtist = document.getElementById('artist-select').value;
+        const newArtistName = document.getElementById('new-artist-name').value;
+        const artist = selectArtist === 'NEW' ? newArtistName : selectArtist;
+
+        if (!title) {
+            alert("Introdu titlul operei mai întâi!");
+            return;
+        }
+        try {
+            const res = await fetch('/api/ai/suggest-category', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: `title=${encodeURIComponent(title)}&artist=${encodeURIComponent(artist || 'Necunoscut')}`
+            });
+            if (res.ok) {
+                const data = await res.json();
+                document.getElementById('art-category').value = data.category || '';
+            }
+        } catch (e) {
+            alert("Eroare la sugerarea categoriei.");
+        }
+    }
+
+    async function generateDescriptionAi() {
+        const title = document.getElementById('art-title').value;
+        const selectArtist = document.getElementById('artist-select').value;
+        const newArtistName = document.getElementById('new-artist-name').value;
+        const artist = selectArtist === 'NEW' ? newArtistName : selectArtist;
+
+        if (!title) {
+            alert("Introdu titlul operei mai întâi!");
+            return;
+        }
+        try {
+            const res = await fetch('/api/ai/generate-description', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: `title=${encodeURIComponent(title)}&artist=${encodeURIComponent(artist || 'Necunoscut')}`
+            });
+            if (res.ok) {
+                const data = await res.json();
+                document.getElementById('art-description').value = data.description || '';
+            }
+        } catch (e) {
+            alert("Eroare la generarea descrierii.");
+        }
+    }
+
+    async function submitArtPiece() {
+        const title = document.getElementById('art-title').value;
+        const selectArtist = document.getElementById('artist-select').value;
+        const category = document.getElementById('art-category').value;
+        const description = document.getElementById('art-description').value;
+
+        let artist = selectArtist;
+        let nationality = '';
+        let biography = '';
+
+        if (selectArtist === 'NEW') {
+            artist = document.getElementById('new-artist-name').value;
+            nationality = document.getElementById('new-artist-nationality').value;
+            biography = document.getElementById('new-artist-biography').value;
+        }
+
+        if (!title || !artist || !category) {
+            alert("Te rog completează cel puțin titlul, artistul și categoria!");
+            return;
+        }
+
+        const bodyData = new URLSearchParams({
+            title: title,
+            artist: artist,
+            category: category,
+            description: description,
+            nationality: nationality,
+            biography: biography
+        });
+
+        try {
+            const res = await fetch('/api/art-pieces', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: bodyData.toString()
+            });
+
+            if (res.ok) {
+                alert("Opera a fost adăugată cu succes!");
+                window.location.href = '/home.html';
+            } else {
+                const err = await res.text();
+                alert("Eroare: " + err);
+            }
+        } catch (e) {
+            alert("Eroare de rețea la salvare.");
+        }
+    }
+
+    async function initTheme() {
+        if (!navigator.geolocation) return;
+        navigator.geolocation.getCurrentPosition(async (pos) => {
+            try {
+                const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${pos.coords.latitude}&longitude=${pos.coords.longitude}&current_weather=true`);
+                const data = await res.json();
+                const temp = data.current_weather.temperature;
+                const code = data.current_weather.weathercode;
+                if (code >= 51 && code <= 67) document.body.className = "rain";
+                else if (code >= 71 && code <= 77) document.body.className = "winter";
+                else if (temp > 24) document.body.className = "summer";
+                else if (temp < 10) document.body.className = "autumn";
+                else document.body.className = "spring";
+            } catch(e) {}
+        });
+    }
+
+    initTheme();
+    loadArtists();
+</script>
+</body>
+</html>

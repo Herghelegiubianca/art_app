@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+    <meta charset="UTF-8">
+    <title>Profilul Meu - ArtReads</title>
+    <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600&family=Cinzel:wght@500;700&family=Playfair+Display:ital,wght@0,600;1,400&family=Lora&family=Montserrat:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #fdfbf7; --text-color: #2c2c2c; --card-bg: #ffffff;
+            --accent-color: #5c4033; --border-color: #eae5d9;
+            --font-main: 'Lora', serif; --font-title: 'Playfair Display', serif;
+        }
+        body { font-family: var(--font-main); background-color: var(--bg-color); color: var(--text-color); margin: 0; padding: 30px; transition: background 0.8s ease, color 0.8s ease; }
+        body.theme-twilight { --bg-color: #1e252b; --text-color: #d1d8e0; --card-bg: #262f38; --accent-color: #4b6584; --border-color: #3b4856; --font-main: 'Cinzel', serif; }
+        body.theme-gilmore-girls { --bg-color: #f4eee1; --text-color: #3b2f2f; --card-bg: #faf5ed; --accent-color: #6b4423; --border-color: #d8c5b2; --font-main: 'Caveat', cursive, serif; font-size: 20px; }
+        body.theme-home-alone { --bg-color: #eef2f5; --text-color: #1a2530; --card-bg: #ffffff; --accent-color: #c0392b; --border-color: #cbd5e1; }
+        body.theme-500-days-of-summer { --bg-color: #fffdf5; --text-color: #2c3e50; --card-bg: #ffffff; --accent-color: #2980b9; }
+        body.theme-pride-and-prejudice { --bg-color: #f4f6f0; --text-color: #2c3e35; --card-bg: #ffffff; --accent-color: #3b5345; }
+
+        header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--border-color); padding-bottom: 15px; margin-bottom: 25px; }
+        h1 { font-family: var(--font-title); color: var(--accent-color); margin: 0; }
+        .profile-card { background: var(--card-bg); border: 1px solid var(--border-color); padding: 25px; border-radius: 10px; margin-bottom: 30px; box-shadow: 0 4px 12px rgba(0,0,0,0.03); }
+        .section-title { font-family: var(--font-title); color: var(--accent-color); border-bottom: 1px solid var(--border-color); padding-bottom: 8px; margin-top: 30px; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 15px; margin-top: 15px; }
+        .item-card { background: var(--card-bg); border: 1px solid var(--border-color); padding: 15px; border-radius: 8px; }
+        .btn-back { background: var(--accent-color); color: white; padding: 8px 14px; text-decoration: none; border-radius: 4px; font-size: 14px; }
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>Profilul Meu ☕🎨</h1>
+    <a href="/home.html" class="btn-back">← Înapoi la Panou</a>
+</header>
+
+<div class="profile-card" id="user-info">
+    <h2 style="margin-top:0; font-family:var(--font-title); color:var(--accent-color);" id="username-display">Se încarcă...</h2>
+    <p><strong>Email:</strong> <span id="email-display">-</span></p>
+</div>
+
+<h2 class="section-title">Operele Adăugate de Mine</h2>
+<div class="grid" id="user-art-grid">
+    <p>Se încarcă operele...</p>
+</div>
+
+<h2 class="section-title">Recenziile Mele</h2>
+<div class="grid" id="user-reviews-grid">
+    <p>Se încarcă recenziile...</p>
+</div>
+
+<!-- Secțiunea de ștergere cont corectată -->
+<div class="profile-card" style="border-color: #c0392b; margin-top: 40px;">
+    <h3 style="color: #c0392b; margin-top:0;">Zona Periculoasă - Ștergere Cont</h3>
+    <p style="font-size: 14px; color: #666;">Dacă dorești să îți ștergi contul, introdu parola actuală pentru confirmare:</p>
+    <input type="password" id="delete-password" placeholder="Parola ta actuală" style="width: 300px; padding: 8px; margin-right: 10px;">
+    <button onclick="deleteAccount()" style="background: #c0392b; color: white; padding: 9px 16px; border: none; border-radius: 6px; cursor: pointer;">Șterge Contul Definitiv</button>
+</div>
+
+<script>
+    async function applyDynamicCinematicTheme() {
+        const body = document.body;
+        let themeClass = "theme-gilmore-girls";
+        try {
+            let lat = 46.5456, lon = 24.5624;
+            if (navigator.geolocation) {
+                await new Promise((resolve) => {
+                    navigator.geolocation.getCurrentPosition(pos => {
+                        lat = pos.coords.latitude;
+                        lon = pos.coords.longitude;
+                        resolve();
+                    }, () => resolve(), {timeout: 3000});
+                });
+            }
+            const weatherRes = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true`);
+            const weatherData = await weatherRes.json();
+            if (weatherData && weatherData.current_weather) {
+                const code = weatherData.current_weather.weathercode;
+                if ((code >= 51 && code <= 67) || (code >= 80 && code <= 82) || code === 45 || code === 48) themeClass = "theme-twilight";
+                else if ((code >= 71 && code <= 77) || code === 85 || code === 86) themeClass = "theme-home-alone";
+                else themeClass = getCalendarThemeBasedSeason();
+            } else {
+                themeClass = getCalendarThemeBasedSeason();
+            }
+        } catch (e) {
+            themeClass = getCalendarThemeBasedSeason();
+        }
+        body.className = themeClass;
+    }
+
+    function getCalendarThemeBasedSeason() {
+        const month = new Date().getMonth() + 1;
+        if (month >= 9 && month <= 11) return "theme-gilmore-girls";
+        if (month === 12 || month <= 2) return "theme-home-alone";
+        if (month >= 6 && month <= 8) return "theme-500-days-of-summer";
+        return "theme-pride-and-prejudice";
+    }
+
+    async function loadProfileData() {
+        try {
+            const response = await fetch('/api/current-user');
+            if (response.status === 401) {
+                window.location.href = '/login.html';
+                return;
+            }
+            if (response.ok) {
+                const data = await response.json();
+                document.getElementById('username-display').textContent = data.username;
+                document.getElementById('email-display').textContent = data.email;
+
+                const artGrid = document.getElementById('user-art-grid');
+                artGrid.innerHTML = "";
+                if (data.artPieces && data.artPieces.length > 0) {
+                    data.artPieces.forEach(piece => {
+                        const card = document.createElement('div');
+                        card.className = 'item-card';
+                        card.innerHTML = `
+                            <h3 style="margin-top:0; color:var(--accent-color);">${escapeHtml(piece.title)}</h3>
+                            <p><strong>Artist:</strong> ${escapeHtml(piece.artist ? piece.artist.name : 'Necunoscut')}</p>
+                            <p><strong>Categorie:</strong> ${escapeHtml(piece.category ? piece.category.name : 'General')}</p>
+                            <a href="/art-detail.html?id=${piece.id}" style="color:var(--accent-color); font-weight:bold; text-decoration:none;">Vezi detalii →</a>
+                        `;
+                        artGrid.appendChild(card);
+                    });
+                } else {
+                    artGrid.innerHTML = "<p>Nu ai adăugat nicio operă până acum.</p>";
+                }
+
+                const reviewsGrid = document.getElementById('user-reviews-grid');
+                reviewsGrid.innerHTML = "";
+                if (data.reviews && data.reviews.length > 0) {
+                    data.reviews.forEach(review => {
+                        const card = document.createElement('div');
+                        card.className = 'item-card';
+                        card.innerHTML = `
+                            <p><strong>Rating:</strong> ⭐ ${review.rating || 5} / 5</p>
+                            <p>${escapeHtml(review.comment || review.content || 'Fără text.')}</p>
+                        `;
+                        reviewsGrid.appendChild(card);
+                    });
+                } else {
+                    reviewsGrid.innerHTML = "<p>Nu ai lăsat nicio recenzie până acum.</p>";
+                }
+            }
+        } catch (e) {
+            console.error("Eroare la încărcarea profilului:", e);
+        }
+    }
+
+    async function deleteAccount() {
+        const password = document.getElementById('delete-password').value;
+        if (!password) {
+            alert("Te rog introdu parola pentru confirmare!");
+            return;
+        }
+        if (!confirm("Sigur vrei să îți ștergi contul? Această acțiune nu poate fi anulată.")) return;
+
+        try {
+            const res = await fetch('/api/account', {
+                method: 'DELETE',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: `password=${encodeURIComponent(password)}`
+            });
+            if (res.ok) {
+                alert("Contul a fost șters.");
+                window.location.href = '/login.html';
+            } else {
+                const err = await res.text();
+                alert("Eroare: " + err);
+            }
+        } catch (e) {
+            alert("Eroare de rețea.");
+        }
+    }
+
+    function escapeHtml(str) {
+        if (!str) return '';
+        return String(str).replace(/[&<>'"]/g, tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag));
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+        applyDynamicCinematicTheme();
+        loadProfileData();
+    });
+</script>
+
+</body>
+</html>
